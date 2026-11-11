@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "finished_at_local": "YYYY-MM-DDTHH:MM:SS+08:00",
+
+  "<TASK-A>": "complete",
+  "<TASK-B>": "pending_<what is missing>",
+  "<TASK-C>": "not_evaluable_until_<gate>",
+
+  "formal_scientific_gate_passed": false,
+
+  "old_time_aggregation_rerun": false,
+  "old_models_refit": false,
+  "new_isotope_relationships_fit": 0,
+
+  "round1_checks": {},
+  "round2_checks": {},
+  "audit_checks_passed": false
+}
