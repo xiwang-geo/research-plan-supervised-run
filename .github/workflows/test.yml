@@ -1,0 +1,77 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip pytest
+
+      - name: Syntax check
+        run: python -m py_compile skills/research-plan-supervised-run/scripts/progress_audit.py
+
+      - name: Run tests
+        run: python -m pytest tests/ -q
+
+      - name: End-to-end audit on a synthetic round
+        run: |
+          mkdir -p round/01_问题
+          printf '# t\n' > round/01_问题/问题登记.md
+          printf 'a,b\n' > round/01_问题/来源索引.csv
+          printf '# e\n' > round/00_先看这里_入口.md
+          printf '{}\n'  > round/完成状态.json
+          printf '# c\n' > round/后续接续说明.md
+          cat > plan.md <<'EOF'
+          # 计划
+
+          ### BC01：登记问题
+
+          **要回答：** 问。
+
+          **做什么：** 做。
+
+          **产出：** `01_问题/问题登记.md`、`01_问题/来源索引.csv`。
+
+          **完成标准：** 两个文件都在。
+
+          ### BC02：还没做的一块
+
+          **要回答：** 问。
+
+          **做什么：** 做。
+
+          **产出：** `02_预期/预期.md`。
+
+          **完成标准：** 文件存在。
+          EOF
+          python skills/research-plan-supervised-run/scripts/progress_audit.py plan.md round --json report.json
+          python - <<'PY'
+          import json
+          d = json.load(open('report.json', encoding='utf-8'))
+          states = {t['code']: t['state'] for t in d['tasks']}
+          assert states == {'BC01': 'complete', 'BC02': 'not-started'}, states
+          assert len(d['handoff']['entry_point']) == 1
+          assert len(d['handoff']['status_json']) == 1
+          assert len(d['handoff']['continuation']) == 1
+          print('end-to-end audit OK:', states)
+          PY
+
+      - name: Audit exits 2 when inputs are missing
+        run: |
+          if python skills/research-plan-supervised-run/scripts/progress_audit.py nope.md . ; then
+            echo "expected exit 2"; exit 1
+          fi
+          echo "exit 2 as expected"
